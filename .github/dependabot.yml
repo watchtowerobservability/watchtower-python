@@ -4,6 +4,9 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      # build-system pin: newer setuptools drop Python 3.9, which we still support
+      - dependency-name: setuptools
   - package-ecosystem: github-actions
     directory: /
     schedule:
