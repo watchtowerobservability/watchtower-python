@@ -8,7 +8,7 @@ urls = {Source = "https://github.com/watchtowerobservability/watchtower-python"}
 dependencies = ["opentelemetry-sdk>=1.25", "opentelemetry-exporter-otlp-proto-http>=1.25"]
 
 [project.optional-dependencies]
-django = ["opentelemetry-instrumentation-django>=0.46b0", "django>=4.2"]
+django = ["opentelemetry-instrumentation-django>=0.66b1", "django>=4.2"]
 flask = ["opentelemetry-instrumentation-flask>=0.46b0", "flask>=2.3"]
 fastapi = ["opentelemetry-instrumentation-fastapi>=0.46b0", "fastapi>=0.100"]
 celery = ["opentelemetry-instrumentation-celery>=0.46b0", "celery>=5.3"]
