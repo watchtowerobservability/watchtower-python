@@ -1,0 +1,24 @@
+[project]
+name = "watchtower-sdk"
+version = "0.1.0"
+description = "Thin Watchtower distribution over the OpenTelemetry Python SDK"
+requires-python = ">=3.9"
+license = {text = "Apache-2.0"}
+urls = {Source = "https://github.com/watchtowerobservability/watchtower-python"}
+dependencies = ["opentelemetry-sdk>=1.25", "opentelemetry-exporter-otlp-proto-http>=1.25"]
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+
+[project.entry-points.pytest11]
+watchtower = "watchtower.pytest_plugin"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["watchtower"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
