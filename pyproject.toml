@@ -8,7 +8,20 @@ urls = {Source = "https://github.com/watchtowerobservability/watchtower-python"}
 dependencies = ["opentelemetry-sdk>=1.25", "opentelemetry-exporter-otlp-proto-http>=1.25"]
 
 [project.optional-dependencies]
-test = ["pytest>=7"]
+django = ["opentelemetry-instrumentation-django>=0.46b0", "django>=4.2"]
+flask = ["opentelemetry-instrumentation-flask>=0.46b0", "flask>=2.3"]
+fastapi = ["opentelemetry-instrumentation-fastapi>=0.46b0", "fastapi>=0.100"]
+celery = ["opentelemetry-instrumentation-celery>=0.46b0", "celery>=5.3"]
+sqlalchemy = ["opentelemetry-instrumentation-sqlalchemy>=0.46b0", "sqlalchemy>=2.0"]
+requests = ["opentelemetry-instrumentation-requests>=0.46b0", "requests>=2.28"]
+httpx = ["opentelemetry-instrumentation-httpx>=0.46b0", "httpx>=0.24"]
+aws-lambda = []
+openai = []
+anthropic = []
+langchain = ["langchain-core>=0.2"]
+test = [
+  "pytest>=7", "watchtower-sdk[django,flask,fastapi,celery,sqlalchemy,requests,httpx,langchain]",
+]
 
 [project.entry-points.pytest11]
 watchtower = "watchtower.pytest_plugin"
@@ -18,7 +31,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["watchtower"]
+packages = ["watchtower", "watchtower.integrations"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

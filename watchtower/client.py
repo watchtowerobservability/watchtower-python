@@ -32,15 +32,21 @@ def safe_resource(attrs):
 
 
 class Client:
-    def __init__(self, api_key, endpoint=None, api_url=None, project=None, service_name="app",
-                 resource=None, redact=None, buffer_dir=None, exporter=None):
+    def __init__(self, api_key, endpoint=None, api_url=None, project=None, service_name=None,
+                 resource=None, environment=None, release=None, redact=None, buffer_dir=None, exporter=None):
         if not api_key:
             raise ValueError("api_key is required")
         self.endpoint = (endpoint or os.environ.get("WT_OTLP_ENDPOINT") or DEFAULT_ENDPOINT).rstrip("/")
         self.api_url = (api_url or os.environ.get("WT_API_URL") or self.endpoint).rstrip("/")
         self.project = project or os.environ.get("WT_PROJECT_ID")
         self.headers = {"Authorization": f"Bearer {api_key}"}
-        res = Resource.create({"service.name": service_name, **safe_resource(resource)})
+        base = {"service.name": service_name or os.environ.get("WT_SERVICE") or "app"}
+        env, rel = environment or os.environ.get("WT_ENVIRONMENT"), release or os.environ.get("WT_RELEASE")
+        if env:
+            base["deployment.environment.name"] = env
+        if rel:
+            base["service.version"] = rel
+        res = Resource.create({**base, **safe_resource(resource)})
         self.provider = TracerProvider(resource=res)
         if redact:
             self.provider.add_span_processor(_Redactor(redact))
@@ -118,9 +124,13 @@ class Client:
         self.provider.shutdown()
 
 
-def init(api_key, **kw):
+def init(api_key=None, capture_errors=True, **kw):
     global _client
-    _client = Client(api_key, **kw)
+    _client = Client(api_key or os.environ.get("WT_INGEST_KEY"), **kw)
+    if capture_errors:
+        from .errors import install_hooks
+
+        install_hooks()
     return _client
 
 
@@ -158,5 +168,8 @@ def evaluate_resume(dataset, task, scorers, previous, **kw):
 
 
 def shutdown():
+    from .errors import uninstall_hooks
+
+    uninstall_hooks()
     if _client:
         _client.shutdown()
