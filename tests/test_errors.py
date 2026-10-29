@@ -3,7 +3,7 @@ import sys
 import threading
 
 import watchtower
-from watchtower import errors
+from watchtower import client, errors
 
 
 def test_capture_exception_new_span_and_dedupe(cap):
@@ -19,7 +19,7 @@ def test_capture_exception_new_span_and_dedupe(cap):
 
 
 def test_capture_on_current_span(cap):
-    with watchtower._need().tracer.start_as_current_span("op") as sp:
+    with client._need().tracer.start_as_current_span("op") as sp:
         tid = watchtower.capture_exception(RuntimeError("x"))
         assert tid == format(sp.get_span_context().trace_id, "032x")
     assert [s.name for s in cap.spans] == ["op"]
@@ -64,7 +64,7 @@ def test_logging_handler(cap):
     h = watchtower.WatchtowerHandler()
     log.addHandler(h)
     try:
-        with watchtower._need().tracer.start_as_current_span("req"):
+        with client._need().tracer.start_as_current_span("req"):
             log.info("hello %s", "there")
             try:
                 1 / 0
