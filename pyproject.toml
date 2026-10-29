@@ -11,7 +11,7 @@ dependencies = ["opentelemetry-sdk>=1.25", "opentelemetry-exporter-otlp-proto-ht
 django = ["opentelemetry-instrumentation-django>=0.46b0", "django>=4.2"]
 flask = ["opentelemetry-instrumentation-flask>=0.46b0", "flask>=2.3"]
 fastapi = ["opentelemetry-instrumentation-fastapi>=0.46b0", "fastapi>=0.100"]
-celery = ["opentelemetry-instrumentation-celery>=0.46b0", "celery>=5.3"]
+celery = ["opentelemetry-instrumentation-celery>=0.66b1", "celery>=5.3"]
 sqlalchemy = ["opentelemetry-instrumentation-sqlalchemy>=0.46b0", "sqlalchemy>=2.0"]
 requests = ["opentelemetry-instrumentation-requests>=0.46b0", "requests>=2.28"]
 httpx = ["opentelemetry-instrumentation-httpx>=0.46b0", "httpx>=0.24"]
