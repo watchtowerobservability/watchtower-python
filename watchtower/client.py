@@ -22,12 +22,8 @@ class _Redactor(SpanProcessor):
         attrs = span._attributes  # noqa: SLF001 - ReadableSpan has no setter
         if attrs is None:
             return
-        for k in list(attrs):
-            v = self.hook(k, attrs[k])
-            try:
-                attrs[k] = v
-            except TypeError:  # frozen after end on some SDK versions
-                pass
+        # The live mapping is immutable once the span ended, so swap in a redacted copy.
+        span._attributes = {k: self.hook(k, v) for k, v in attrs.items()}  # noqa: SLF001
 
 
 def safe_resource(attrs):

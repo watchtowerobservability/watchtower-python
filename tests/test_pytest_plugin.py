@@ -18,5 +18,5 @@ def test_plugin_marks_outcome(pytester):
         "    assert any(s.attributes.get('test.outcome') == 'passed' for s in C.spans)\n"
     )
     pytester.makepyfile("def test_a():\n    assert True\n")
-    r = pytester.runpytest("--wt-trace", "-p", "watchtower.pytest_plugin")
+    r = pytester.runpytest_subprocess("--wt-trace")
     r.assert_outcomes(passed=1)
