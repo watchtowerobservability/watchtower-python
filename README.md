@@ -1,4 +1,4 @@
-# watchtower-sdk (Python)
+# watchtower-observability (Python)
 
 [![CI](https://github.com/watchtowerobservability/watchtower-python/actions/workflows/ci.yml/badge.svg)](https://github.com/watchtowerobservability/watchtower-python/actions/workflows/ci.yml)
 
@@ -23,7 +23,7 @@ watchtower.init(os.environ["WT_INGEST_KEY"], project=os.environ["WT_PROJECT_ID"]
 endpoint with the same key (`/v1/logs`, `/v1/metrics`). Records of the standard `logging` module are
 bridged with the active trace and span ids. Meters come from `opentelemetry.metrics.get_meter(...)`
 (the client sets the global meter provider); counters and histograms use delta temporality unless
-`OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE` is set. Install `watchtower-sdk[runtime]` for
+`OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE` is set. Install `watchtower-observability[runtime]` for
 GC, memory, thread and CPU metrics. With `buffer_dir`, failed log and metric batches are spooled to
 `<buffer_dir>/logs` and `<buffer_dir>/metrics` (500 batches each, oldest dropped) and replayed first.
 The standard `OTEL_BLRP_*` and `OTEL_METRIC_EXPORT_INTERVAL` variables apply.
@@ -43,7 +43,7 @@ Errors are recorded on the current span (or a new `exception` span) and return t
 
 ## Integrations
 
-Install an extra, e.g. `pip install "watchtower-sdk[flask]"`, then call `instrument` once after `init`.
+Install an extra, e.g. `pip install "watchtower-observability[flask]"`, then call `instrument` once after `init`.
 
 | Extra | Call | Adds |
 | --- | --- | --- |

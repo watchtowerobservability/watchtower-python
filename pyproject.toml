@@ -1,5 +1,5 @@
 [project]
-name = "watchtower-sdk"
+name = "watchtower-observability"
 version = "0.1.2"
 description = "Thin Watchtower distribution over the OpenTelemetry Python SDK"
 requires-python = ">=3.9"
@@ -22,7 +22,7 @@ openai = []
 anthropic = []
 langchain = ["langchain-core>=0.2"]
 test = [
-  "pytest>=7", "cachetools>=5", "watchtower-sdk[django,flask,fastapi,celery,sqlalchemy,requests,httpx,langchain,runtime]",
+  "pytest>=7", "cachetools>=5", "watchtower-observability[django,flask,fastapi,celery,sqlalchemy,requests,httpx,langchain,runtime]",
 ]
 
 [project.entry-points.pytest11]

@@ -2,6 +2,7 @@
 
 ## 0.1.2
 
+- Distribution renamed to `watchtower-observability` (`watchtower-sdk` on PyPI belongs to another project). Install with `pip install watchtower-observability`; the import package is still `watchtower`.
 - Sync with the monorepo: log code location, in-app WAF and exception replay.
 
 - Logs and metrics: `init` wires the OTel logs SDK (the `logging` bridge, with trace and span ids) and the metrics SDK (periodic OTLP reader, delta temporality), switched by `WATCHTOWER_LOGS` / `WATCHTOWER_METRICS` (default on) or `logs=` / `metrics=`. Runtime metrics with the `runtime` extra. The offline buffer covers logs and metrics in `<buffer_dir>/logs` and `/metrics`.
