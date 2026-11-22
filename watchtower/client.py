@@ -1,11 +1,14 @@
 import functools
 import json
+import logging
 import os
 import urllib.request
 
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import SpanProcessor, TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
+
+from . import signals
 
 WT_PREFIX = "wt."
 DEFAULT_ENDPOINT = "http://localhost:4318"
@@ -33,7 +36,8 @@ def safe_resource(attrs):
 
 class Client:
     def __init__(self, api_key, endpoint=None, api_url=None, project=None, service_name=None,
-                 resource=None, environment=None, release=None, redact=None, buffer_dir=None, exporter=None):
+                 resource=None, environment=None, release=None, redact=None, buffer_dir=None, exporter=None,
+                 logs=None, metrics=None, remote_sampling=None, sampling_interval=None, code_origin=None):
         if not api_key:
             raise ValueError("api_key is required")
         self.endpoint = (endpoint or os.environ.get("WT_OTLP_ENDPOINT") or DEFAULT_ENDPOINT).rstrip("/")
@@ -47,7 +51,22 @@ class Client:
         if rel:
             base["service.version"] = rel
         res = Resource.create({**base, **safe_resource(resource)})
-        self.provider = TracerProvider(resource=res)
+        self.remote_sampler = None
+        sampler = None
+        if remote_sampling or (remote_sampling is None and os.environ.get("WT_REMOTE_SAMPLING") == "1"):
+            from opentelemetry.sdk.trace.sampling import ParentBased
+
+            from .sampling import RemoteSampler
+
+            self.remote_sampler = RemoteSampler(
+                self.endpoint, self.headers, base["service.name"], env,
+                sampling_interval or float(os.environ.get("WT_SAMPLING_INTERVAL_S") or 30))
+            sampler = ParentBased(self.remote_sampler)
+        self.provider = TracerProvider(resource=res, **({"sampler": sampler} if sampler else {}))
+        if code_origin or (code_origin is None and os.environ.get("WT_CODE_ORIGIN") == "1"):
+            from .origin import CodeOrigin
+
+            self.provider.add_span_processor(CodeOrigin())
         if redact:
             self.provider.add_span_processor(_Redactor(redact))
         if exporter is None:
@@ -62,6 +81,11 @@ class Client:
         self.exporter = exporter
         self.provider.add_span_processor(BatchSpanProcessor(exporter))
         self.tracer = self.provider.get_tracer("watchtower")
+        self.logger_provider = self.meter_provider = self._log_handler = None
+        if signals.enabled(logs, "WATCHTOWER_LOGS", "OTEL_LOGS_EXPORTER"):
+            self.logger_provider, self._log_handler = signals.start_logs(self.endpoint, self.headers, res, buffer_dir)
+        if signals.enabled(metrics, "WATCHTOWER_METRICS", "OTEL_METRICS_EXPORTER"):
+            self.meter_provider = signals.start_metrics(self.endpoint, self.headers, res, buffer_dir)
 
     def _call(self, method, path, body=None):
         url = f"{self.api_url}/v1/projects/{self.project}/llm/{path}"
@@ -121,16 +145,44 @@ class Client:
         return rows
 
     def shutdown(self):
+        if self.remote_sampler is not None:
+            self.remote_sampler.stop()
         self.provider.shutdown()
+        if self._log_handler is not None:
+            logging.getLogger().removeHandler(self._log_handler)
+            self._log_handler = None
+        for p in (self.logger_provider, self.meter_provider):
+            if p is not None:
+                p.shutdown()
+        self.logger_provider = self.meter_provider = None
 
 
-def init(api_key=None, capture_errors=True, **kw):
+_profiler = None
+
+
+def init(api_key=None, capture_errors=True, capture_rules=None, capture_locals=None, **kw):
     global _client
     _client = Client(api_key or os.environ.get("WT_INGEST_KEY"), **kw)
+    if capture_rules or (capture_rules is None and os.environ.get("WT_CAPTURE_RULES") == "1"):
+        from . import capture
+
+        capture.apply(_client.api_url, api_key or os.environ.get("WT_INGEST_KEY"), kw.get("service_name"))
     if capture_errors:
-        from .errors import install_hooks
+        from .errors import enable_locals, install_hooks
 
         install_hooks()
+        # exception replay: opt-in here (or WT_EXCEPTION_LOCALS=1) and in the project's issue settings
+        enable_locals(capture_locals if capture_locals is not None else os.environ.get("WT_EXCEPTION_LOCALS") == "1")
+    if os.environ.get("WT_PROFILING") in ("1", "true"):  # also set by the agent's lambda_instrument command
+        from . import profiling
+
+        global _profiler
+        if _profiler is not None:
+            _profiler.stop()
+        try:
+            _profiler = profiling.start(api_key=api_key, service_name=kw.get("service_name"))
+        except ValueError:  # no key: profiling is best effort, never break init
+            _profiler = None
     return _client
 
 

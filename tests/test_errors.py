@@ -75,3 +75,33 @@ def test_logging_handler(cap):
     ev = cap.spans[0].events
     assert [e.name for e in ev] == ["log", "exception", "log"] or {e.name for e in ev} == {"log", "exception"}
     assert ev[0].attributes["log.message"] == "hello there"
+
+
+def test_exception_locals_opt_in_masks_secrets(cap):
+    import json
+
+    def boom(password, count):
+        total = count * 2
+        raise ValueError("bad " + str(total))
+
+    errors.enable_locals(True)
+    try:
+        try:
+            boom("hunter2", 4)
+        except ValueError as e:
+            watchtower.capture_exception(e)
+    finally:
+        errors.enable_locals(False)
+    frames = json.loads(cap.spans[0].events[0].attributes["exception.locals"])
+    top = frames[0]
+    assert top["function"] == "boom"
+    assert top["vars"]["password"] == "[Filtered]" and top["vars"]["count"] == "4" and top["vars"]["total"] == "8"
+    assert "hunter2" not in json.dumps(frames)
+
+
+def test_exception_locals_off_by_default(cap):
+    try:
+        raise ValueError("x")
+    except ValueError as e:
+        watchtower.capture_exception(e)
+    assert "exception.locals" not in cap.spans[0].events[0].attributes

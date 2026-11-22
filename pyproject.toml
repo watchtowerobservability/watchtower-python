@@ -1,11 +1,11 @@
 [project]
 name = "watchtower-sdk"
-version = "0.1.0"
+version = "0.1.2"
 description = "Thin Watchtower distribution over the OpenTelemetry Python SDK"
 requires-python = ">=3.9"
 license = {text = "Apache-2.0"}
 urls = {Source = "https://github.com/watchtowerobservability/watchtower-python"}
-dependencies = ["opentelemetry-sdk>=1.25", "opentelemetry-exporter-otlp-proto-http>=1.25"]
+dependencies = ["opentelemetry-sdk>=1.25", "opentelemetry-exporter-otlp-proto-http>=1.25", "xxhash>=3.3"]
 
 [project.optional-dependencies]
 django = ["opentelemetry-instrumentation-django>=0.46b0", "django>=4.2"]
@@ -15,12 +15,14 @@ celery = ["opentelemetry-instrumentation-celery>=0.46b0", "celery>=5.3"]
 sqlalchemy = ["opentelemetry-instrumentation-sqlalchemy>=0.46b0", "sqlalchemy>=2.0"]
 requests = ["opentelemetry-instrumentation-requests>=0.46b0", "requests>=2.28"]
 httpx = ["opentelemetry-instrumentation-httpx>=0.46b0", "httpx>=0.24"]
+runtime = ["opentelemetry-instrumentation-system-metrics>=0.46b0"]
 aws-lambda = []
+azure-functions = []
 openai = []
 anthropic = []
 langchain = ["langchain-core>=0.2"]
 test = [
-  "pytest>=7", "watchtower-sdk[django,flask,fastapi,celery,sqlalchemy,requests,httpx,langchain]",
+  "pytest>=7", "cachetools>=5", "watchtower-sdk[django,flask,fastapi,celery,sqlalchemy,requests,httpx,langchain,runtime]",
 ]
 
 [project.entry-points.pytest11]

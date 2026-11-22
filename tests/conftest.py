@@ -1,7 +1,14 @@
+import os
+
 import pytest
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor, SpanExportResult
 
 from watchtower import client as wt
+
+# Tests opt in to logs and metrics (tests/test_signals.py); elsewhere they would bridge every
+# record and start a reader thread per client.
+os.environ.setdefault("WATCHTOWER_LOGS", "off")
+os.environ.setdefault("WATCHTOWER_METRICS", "off")
 
 
 class Capture:

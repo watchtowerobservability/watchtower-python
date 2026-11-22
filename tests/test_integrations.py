@@ -3,7 +3,7 @@ from types import SimpleNamespace as NS
 import pytest
 
 import watchtower
-from watchtower.integrations import aws_lambda, genai
+from watchtower.integrations import aws_lambda, azure_functions, genai
 
 
 def test_lambda_wrap_success_and_error(cap):
@@ -22,6 +22,35 @@ def test_lambda_wrap_success_and_error(cap):
         bad({}, ctx)
     assert cap.spans[0].attributes["faas.invocation_id"] == "rid"
     assert cap.spans[1].status.status_code.name == "ERROR"
+
+
+def test_azure_functions_wrap(cap):
+    class HttpRequest:  # type name is what the trigger mapping reads
+        pass
+
+    class TimerRequest:
+        pass
+
+    azure_functions._cold[0] = True
+    ctx = NS(function_name="az", invocation_id="i1")
+
+    @azure_functions.wrap
+    def http(req, context):
+        return NS(status_code=503)
+
+    @azure_functions.wrap
+    def timer(timer, context):
+        raise ValueError("azf")
+
+    assert http(req=HttpRequest(), context=ctx).status_code == 503
+    with pytest.raises(ValueError):
+        timer(timer=TimerRequest(), context=ctx)
+    a, b = cap.spans[0], cap.spans[1]
+    assert a.name == "az" and a.attributes["faas.invocation_id"] == "i1"
+    assert a.attributes["faas.trigger"] == "http" and a.attributes["faas.coldstart"] is True
+    assert a.attributes["http.response.status_code"] == 503 and a.status.status_code.name == "ERROR"
+    assert b.attributes["faas.trigger"] == "timer" and b.attributes["faas.coldstart"] is False
+    assert b.status.status_code.name == "ERROR"
 
 
 def test_openai_span(cap):
@@ -49,6 +78,31 @@ def test_anthropic_span_and_error(cap):
     with pytest.raises(RuntimeError):
         genai.instrument_anthropic(client).messages.create(model="claude")
     assert cap.spans[1].status.status_code.name == "ERROR"
+
+
+def test_bedrock_google_litellm_spans(cap):
+    res = {"stopReason": "end_turn", "usage": {"inputTokens": 11, "outputTokens": 4}, "ResponseMetadata": {"RequestId": "rq"}}
+    bedrock = NS(converse=lambda **kw: res, invoke_model=lambda **kw: {"body": b"{}"})
+    genai.instrument_bedrock(bedrock).converse(modelId="anthropic.claude-3", messages=[{"content": "secret"}])
+    a = cap.spans[0].attributes
+    assert a["gen_ai.system"] == "aws.bedrock" and a["gen_ai.request.model"] == "anthropic.claude-3"
+    assert a["gen_ai.usage.input_tokens"] == 11 and a["gen_ai.response.finish_reasons"] == ("end_turn",)
+    assert a["gen_ai.response.id"] == "rq" and "secret" not in str(a)
+
+    gres = NS(model_version="gemini-2.0-flash-001", response_id="g1",
+              usage_metadata=NS(prompt_token_count=5, candidates_token_count=6),
+              candidates=[NS(finish_reason=NS(name="STOP"))])
+    google = NS(models=NS(generate_content=lambda **kw: gres))
+    genai.instrument_google_genai(google).models.generate_content(model="gemini-2.0-flash", contents="hi")
+    g = cap.spans[1].attributes
+    assert g["gen_ai.system"] == "gemini" and g["gen_ai.usage.output_tokens"] == 6
+    assert g["gen_ai.response.finish_reasons"] == ("STOP",) and g["gen_ai.response.model"] == "gemini-2.0-flash-001"
+
+    lres = NS(model="gpt-4o", id="l1", usage=NS(prompt_tokens=1, completion_tokens=2), choices=[NS(finish_reason="stop")])
+    lite = NS(completion=lambda **kw: lres)
+    genai.instrument_litellm(lite).completion(model="openai/gpt-4o", messages=[])
+    lt = cap.spans[2].attributes
+    assert lt["gen_ai.system"] == "litellm" and lt["gen_ai.usage.input_tokens"] == 1
 
 
 def test_langchain_handler(cap):
