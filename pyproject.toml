@@ -22,7 +22,7 @@ openai = []
 anthropic = []
 langchain = ["langchain-core>=0.2"]
 test = [
-  "pytest>=7", "cachetools>=5", "watchtower-sdk[django,flask,fastapi,celery,sqlalchemy,requests,httpx,langchain,runtime]",
+  "pytest>=9.2.0", "cachetools>=5", "watchtower-sdk[django,flask,fastapi,celery,sqlalchemy,requests,httpx,langchain,runtime]",
 ]
 
 [project.entry-points.pytest11]
