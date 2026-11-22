@@ -1,3 +1,4 @@
+import hashlib
 import io
 import json
 
@@ -32,7 +33,9 @@ def test_ratio_for_rules():
 
 
 def test_fraction_is_spread_over_the_unit_interval():
-    n = sum(1 for i in range(2000) if trace_fraction(i + (9 << 96)) < 0.25)
+    # random-looking ids like real ones: FNV-1a's top bits barely move when only the last bytes change
+    ids = (int.from_bytes(hashlib.sha256(str(i).encode()).digest()[:16], "big") for i in range(2000))
+    n = sum(1 for t in ids if trace_fraction(t) < 0.25)
     assert 350 < n < 650
 
 

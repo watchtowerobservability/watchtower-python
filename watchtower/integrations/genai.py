@@ -180,11 +180,13 @@ class WatchtowerCallbackHandler(_Base):
 
     def on_chain_start(self, serialized, inputs, *, run_id, parent_run_id=None, metadata=None, name=None, **kw):
         node = (metadata or {}).get("langgraph_node")
-        # Only LangGraph runs get spans (the graph root and its nodes): plain LCEL chains are noise.
-        if node is None and not (parent_run_id is None and (metadata or {}).get("langgraph_step") is not None):
+        # Only LangGraph runs get spans (the graph root and the node runs themselves): plain LCEL chains
+        # are noise, including the runnables inside a node, which inherit its `langgraph_node` metadata.
+        is_root = parent_run_id is None and (metadata or {}).get("langgraph_step") is not None
+        if not is_root and (node is None or name != node):
             self._up[run_id] = parent_run_id
             return
-        who = node if (node and name == node) else (name or node or "graph")
+        who = name or node or "graph"
         self._open(run_id, parent_run_id, f"invoke_agent {who}", {
             "gen_ai.operation.name": "invoke_agent", "gen_ai.agent.name": who, "gen_ai.system": "langgraph"})
 

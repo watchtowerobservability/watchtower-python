@@ -83,11 +83,17 @@ def add_inputs(*values):
         _collect(v, cur)
 
 
+def _collect_query(qs, out):
+    _collect(qs, out)
+    _collect(urllib.parse.parse_qs(qs), out)
+    # the raw (still percent-encoded) values too: apps often slice them straight out of the query string
+    _collect([p.split("=", 1)[-1] for p in qs.split("&")], out)
+
+
 def _env_inputs(environ):
     out = []
     qs = environ.get("QUERY_STRING", "")
-    _collect(qs, out)
-    _collect(urllib.parse.parse_qs(qs), out)
+    _collect_query(qs, out)
     _collect(environ.get("PATH_INFO", ""), out)
     for k, v in environ.items():
         if k.startswith("HTTP_") or k == "CONTENT_TYPE":
@@ -122,8 +128,7 @@ class IastASGIMiddleware:
             return await self.app(scope, receive, send)
         out = []
         qs = scope.get("query_string", b"").decode("utf-8", "replace")
-        _collect(qs, out)
-        _collect(urllib.parse.parse_qs(qs), out)
+        _collect_query(qs, out)
         _collect(scope.get("path", ""), out)
         for _, v in scope.get("headers", []):
             _collect(v, out)
