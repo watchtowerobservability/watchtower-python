@@ -20,7 +20,7 @@ jobs:
       - run: pip install -e '.[test]' build
       - run: pytest
       - run: python -m build
-      - uses: actions/attest-build-provenance@v2
+      - uses: actions/attest-build-provenance@v4
         with:
           subject-path: 'dist/*'
       - name: GitHub release
